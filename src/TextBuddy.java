@@ -50,7 +50,7 @@ public class TextBuddy {
 	private static final String STRING_PREFIX = "temp";
 	private static final String STRING_POSTFIX = "txt";
 
-	private static File outputFile;;
+	public static File outputFile;
 	private static File temporaryFile;
 	private static PrintWriter writer;
 	private static Scanner reader;

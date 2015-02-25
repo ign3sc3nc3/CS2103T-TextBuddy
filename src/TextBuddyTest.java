@@ -1,21 +1,52 @@
 import static org.junit.Assert.*;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 
 public class TextBuddyTest {
-
+	//trailing white spaces
+	String s1 = "add hello how are you?             ";
+	
+	//normal delete usagae
+	String s2 = "delete 30";
+	
+	//symbol and merged words
+	String s3 = "add.badtypist skills";
+	
+	//trailing white spaces before and after the first word
+	String s4 = "       delete even worse typing skills     ";
+	
+	//normal add usage
+	String s5 = "add love makes the world go round";
+	
+	@Before
+	public void testSetup(){
+		TextBuddy.outputFile = new File("textbuddytest.txt");
+	} 
+	
 	@Test
 	public void testGetFirstWord() {
-		TextBuddy tb = new TextBuddy();
-		assertEquals("First word of \"add wash clothes\" is \"add\"", "add", tb.getFirstWord("add wash clothes"));
-		assertEquals("First word of \"add change documents\" is \"add\"", "add", tb.getFirstWord("add change documents"));
-		assertEquals("First word of \"delete wash clothes\" is \"delete\"", "delete", tb.getFirstWord("delete wash clothes"));
-		assertEquals("First word of \"delete change documents\" is \"delete\"", "delete", tb.getFirstWord("delete wash clothes"));
+		//String with trailing white spaces
+				
+		assertEquals("add", TextBuddy.getFirstWord(s1));
+		assertEquals("delete", TextBuddy.getFirstWord(s2));
+		assertEquals("add.badtypist", TextBuddy.getFirstWord(s3));
+		assertEquals("delete", TextBuddy.getFirstWord(s4));
+		assertEquals("add", TextBuddy.getFirstWord(s5));
 	}	
+	
+	@Test
 	public void testDeleteFirstWord(){
-		TextBuddy tb = new TextBuddy();
-		assertEquals("Remaining text after deleting command word", "wash clothes", tb.getLineToAddOrDelete("add wash clothes"));
+		assertEquals("hello how are you?", TextBuddy.getLineToAddOrDelete(s1));
+		assertEquals("30", TextBuddy.getLineToAddOrDelete(s2));
+		assertEquals("skills", TextBuddy.getLineToAddOrDelete(s3));
+		assertEquals("even worse typing skills", TextBuddy.getLineToAddOrDelete(s4));
+		assertEquals("love makes the world go round", TextBuddy.getLineToAddOrDelete(s5));
 		
 	}
+	
+	
 }
