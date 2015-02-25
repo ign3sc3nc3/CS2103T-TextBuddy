@@ -1,6 +1,6 @@
 /**
- * Program: TextBuddy
- * Done by: Jonathan Lim Siu Chi
+ * Program: TextBuddy CE2
+ * Author: Jonathan Lim Siu Chi
  * Matric Number: A0110839H
  * Group: W15-3J
  * 
@@ -10,7 +10,8 @@
  * 
  * Functions of TextBuddy are as follows: 
  *  1. add <string> : Will add string input into file.
- *  2. delete <integer> : Will delete the nth line as specified by integer input in the file. Integer input is assumed. 
+ *  2. delete <integer> : Will delete the nth line as specified by integer input in the file. 
+ *  	Throws error if no integer is given. 
  *  3. display : Prints out the content of the file.
  *  4. clear : Deletes all contents of the file.
  *  5. exit: Exits the program.
@@ -43,8 +44,16 @@ public class TextBuddy {
 	private static final String MESSAGE_ENTER_NEW_FILE = "Enter new file name: ";
 	private static final String MESSAGE_OVERWRITE_FILE = "%1$s will be overwritten.";
 
-	private static File outputFile = null;
-	private static File temporaryFile = null;
+	private static final String MESSAGE_IO_ERROR = "Error reading or writing file.";
+	private static final String MESSAGE_CREATE_TEMP_FILE_ERROR = "Error in creating temporary file.";
+
+	private static final String STRING_PREFIX = "temp";
+	private static final String STRING_POSTFIX = "txt";
+
+	private static File outputFile;;
+	private static File temporaryFile;
+	private static PrintWriter writer;
+	private static Scanner reader;
 
 	enum ACTION_TYPE {
 		ADD_LINE, DELETE_LINE, CLEAR_FILE, DISPLAY_FILE, INVALID_COMMAND, EXIT_PROGRAM;
@@ -64,6 +73,11 @@ public class TextBuddy {
 
 		printReadyMessage();
 
+		commandExecuter(commandLineInput);
+
+	}
+
+	private static void commandExecuter(Scanner commandLineInput) {
 		while (true) {
 			System.out.print(MESSAGE_COMMAND);
 
@@ -79,8 +93,11 @@ public class TextBuddy {
 					break;
 
 				case DELETE_LINE:
-					int lineToDelete = Integer.parseInt(sentence);
-					deleteLineFromFile(lineToDelete);
+
+					if (isNumberString(sentence)) {
+						int lineToDelete = getLineToDelete(sentence);
+						deleteLineFromFile(lineToDelete);
+					}
 					break;
 
 				case CLEAR_FILE:
@@ -102,6 +119,20 @@ public class TextBuddy {
 			}
 
 		}
+	}
+	
+	private static int getLineToDelete(String sentence){
+		return Integer.parseInt(sentence);
+	}
+	
+	private static Boolean isNumberString(String sentence) {
+		try {
+			Integer.parseInt(sentence);
+			return true;
+		} catch (NumberFormatException e) {
+			messagePrinter(MESSAGE_COMMAND_NOT_RECOGNISED);
+			return false;
+		}
 
 	}
 
@@ -119,12 +150,10 @@ public class TextBuddy {
 	private static String overwriteExistingFile(String outputFileName, Scanner commandLineInput) {
 		while (new File(outputFileName).exists()) {
 			String chooseToOverwrite = null;
-			String message = String.format(MESSAGE_FILE_ALREADY_EXISTS,
-					outputFileName);
+			String message = String.format(MESSAGE_FILE_ALREADY_EXISTS, outputFileName);
 			System.out.print(message);
 
-			chooseToOverwrite = commandLineInput.nextLine().toLowerCase()
-					.trim();
+			chooseToOverwrite = commandLineInput.nextLine().toLowerCase().trim();
 
 			if (chooseToOverwrite.equals("n")) {
 				System.out.print(MESSAGE_ENTER_NEW_FILE);
@@ -139,82 +168,96 @@ public class TextBuddy {
 	}
 
 	private static void addLineToFile(String sentence) {
-
-		PrintWriter writerToFile = null;
-
-		try {
-
-			writerToFile = new PrintWriter(new FileWriter(outputFile, true)); // true: append data to file
-			writerToFile.println(sentence);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			writerToFile.close();
-		}
-
+		setUpWriter(outputFile, true); // true: append data to file
+		writer.println(sentence);
+		closeWriter();
 	}
 
 	private static void deleteLineFromFile(int lineToDelete) {
-		Scanner fileReader = null;
-		PrintWriter writerToFile = null;
 
-		temporaryFile = new File("temp.txt");
+		createTemporaryFile();
+
+		setUpReader(outputFile);
+		setUpWriter(temporaryFile, false); 
+		
+		int lineNumber = 0;
 		String sentenceDeleted = null;
 		Boolean sentenceIsFound = false;
+		
+		//transfer undeleted files to temporary file
+		while (reader.hasNextLine()) {
+			String lineFromFile = reader.nextLine();
+			lineNumber++;
 
-		try {
-			fileReader = new Scanner(outputFile);
-			writerToFile = new PrintWriter(new FileWriter(temporaryFile)); // transfer undeleted
-																		   //lines to temp file
-			int lineNumber = 0;
-			while (fileReader.hasNextLine()) {
-				String lineFromFile = fileReader.nextLine();
-				lineNumber++;
-
-				if (lineNumber == lineToDelete) {
-					sentenceIsFound = true;
-					sentenceDeleted = lineFromFile;
-				} else { // write undeleted lines to temporary file
-					writerToFile.println(lineFromFile);
-				}
+			if (lineNumber == lineToDelete) {
+				sentenceIsFound = true;
+				sentenceDeleted = lineFromFile;
+			} else { 
+				writer.println(lineFromFile);
 			}
-
-		} catch (IOException e) {
-			e.getStackTrace();
-		} finally {
-			fileReader.close();
-			writerToFile.close();
 		}
 
-		rewriteActualFileWithTempFile(temporaryFile);
+		closeReader();
+		closeWriter();
+
+		rewriteActualFileWithTempFile();
 
 		if (sentenceIsFound) {
 			printDeleteMessage(sentenceDeleted);
 		} else {
 			printNotFoundMessage(lineToDelete);
 		}
+
 	}
 
-	private static void rewriteActualFileWithTempFile(File temporaryFile) {
-		Scanner fileReader = null;
-		PrintWriter writerToFile = null;
+	private static void createTemporaryFile() {
 		try {
-
-			fileReader = new Scanner(temporaryFile);
-			writerToFile = new PrintWriter(new FileWriter(outputFile));
-
-			while (fileReader.hasNextLine()) {
-				writerToFile.println(fileReader.nextLine());
-			}
+			temporaryFile = File.createTempFile(STRING_PREFIX, STRING_POSTFIX);
 		} catch (IOException e) {
+			messagePrinter(MESSAGE_CREATE_TEMP_FILE_ERROR);
 			e.printStackTrace();
-		} finally {
-			fileReader.close();
-			writerToFile.close();
+		}
+	}
+
+	private static void rewriteActualFileWithTempFile() {
+
+		setUpReader(temporaryFile);
+		setUpWriter(outputFile, false);
+
+		while (reader.hasNextLine()) {
+			writer.println(reader.nextLine());
 		}
 
+		closeReader();
+		closeWriter();
 		deleteTemporaryFile();
+	}
+
+	private static void setUpWriter(File fileToWrite, Boolean isAppend) {
+		try {
+			// if isAppend is true, input stream appends to file being written
+			writer = new PrintWriter(new FileWriter(fileToWrite, isAppend));
+		} catch (IOException e) {
+			messagePrinter(MESSAGE_IO_ERROR);
+			e.printStackTrace();
+		}
+	}
+
+	private static void closeWriter() {
+		writer.close();
+	}
+
+	private static void setUpReader(File fileToRead) {
+		try {
+			reader = new Scanner(fileToRead);
+		} catch (IOException e) {
+			messagePrinter(MESSAGE_IO_ERROR);
+			e.printStackTrace();
+		}
+	}
+
+	private static void closeReader() {
+		reader.close();
 	}
 
 	public static String getFirstWord(String sentence) {
@@ -225,32 +268,20 @@ public class TextBuddy {
 	}
 
 	public static String getLineToAddOrDelete(String sentence) {
-		String sentenceWithoutFirstWord = sentence.replace(
-				getFirstWord(sentence), "").trim();
+		String sentenceWithoutFirstWord = sentence.replace(getFirstWord(sentence), "").trim();
 
 		return sentenceWithoutFirstWord;
 	}
 
 	private static void printFile() {
-		Scanner fileReader = null;
 		int lineCount = 0;
-		try {
 
-			fileReader = new Scanner(outputFile);
-
-			while (fileReader.hasNextLine()) {
-				lineCount++;
-				String message = String.format(MESSAGE_DISPLAY_LINE, lineCount,
-						fileReader.nextLine());
-				messagePrinter(message);
-			}
-
-		} catch (IOException e) {
-
-		} finally {
-			if (fileReader != null) {
-				fileReader.close();
-			}
+		setUpReader(outputFile);
+		
+		while (reader.hasNextLine()) {
+			lineCount++;
+			String message = String.format(MESSAGE_DISPLAY_LINE, lineCount, reader.nextLine());
+			messagePrinter(message);
 		}
 
 		if (isEmptyFile()) {
@@ -258,21 +289,14 @@ public class TextBuddy {
 			String message = String.format(MESSAGE_EMPTY_FILE, fileName);
 			messagePrinter(message);
 		}
-
 	}
 
 	private static Boolean isEmptyFile() {
-		Scanner fileReader = null;
 		Boolean isFileEmpty = false;
-		try {
-			fileReader = new Scanner(outputFile);
-			if (fileReader.hasNextLine() == false)
-				isFileEmpty = true;
+		setUpReader(outputFile);
 
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			fileReader.close();
+		if (reader.hasNextLine() == false) {
+			isFileEmpty = true;
 		}
 
 		return isFileEmpty;
@@ -280,16 +304,8 @@ public class TextBuddy {
 	}
 
 	private static void clearFileData() {
-		PrintWriter writerToFile = null;
-		try {
-			writerToFile = new PrintWriter(new FileWriter(outputFile));
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			writerToFile.close();
-		}
-
+		setUpWriter(outputFile, false);
+		closeWriter();
 	}
 
 	private static void deleteTemporaryFile() {
@@ -347,8 +363,7 @@ public class TextBuddy {
 
 	private static void printNotFoundMessage(int lineNumber) {
 		String fileName = outputFile.getName();
-		String message = String.format(MESSAGE_LINE_NOT_FOUND, lineNumber,
-				fileName);
+		String message = String.format(MESSAGE_LINE_NOT_FOUND, lineNumber, fileName);
 		messagePrinter(message);
 	}
 
