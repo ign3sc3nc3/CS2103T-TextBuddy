@@ -24,9 +24,14 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.FileWriter;
+
 import java.nio.file.Files;
 import java.nio.file.Paths;
+
 import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 
 public class TextBuddy {
 
@@ -56,7 +61,7 @@ public class TextBuddy {
 	private static Scanner reader;
 
 	enum ACTION_TYPE {
-		ADD_LINE, DELETE_LINE, CLEAR_FILE, DISPLAY_FILE, INVALID_COMMAND, EXIT_PROGRAM;
+		ADD_LINE, DELETE_LINE, CLEAR_FILE, DISPLAY_FILE, INVALID_COMMAND, EXIT_PROGRAM, SORT;
 
 	}
 
@@ -107,6 +112,10 @@ public class TextBuddy {
 
 				case DISPLAY_FILE:
 					printFile();
+					break;
+					
+				case SORT:
+					sortFileContents();
 					break;
 
 				case EXIT_PROGRAM:
@@ -232,6 +241,45 @@ public class TextBuddy {
 		closeWriter();
 		deleteTemporaryFile();
 	}
+	
+	private static void sortFileContents(){
+		if(isEmptyFile()){
+			printEmptyFileMessage();
+			return;
+		}
+
+		ArrayList<String> list = generateSortedList();		
+		transferSortedListToFile(list);
+	}
+
+	private static void transferSortedListToFile(ArrayList<String> list) {
+		Iterator<String> iterator = list.iterator();
+		
+		//false: clears output file of all contents
+		setUpWriter(outputFile, false);
+		
+		while(iterator.hasNext()){
+			writer.println(iterator.next());
+		}
+		
+		closeWriter();
+	}
+
+	private static ArrayList<String> generateSortedList() {
+		ArrayList<String> list = new ArrayList<String>();
+		
+		setUpReader(outputFile);
+		
+		while(reader.hasNextLine()){
+			list.add(reader.nextLine());
+		}
+		
+		closeReader();
+		
+		Collections.sort(list);
+		
+		return list;
+	}
 
 	private static void setUpWriter(File fileToWrite, Boolean isAppend) {
 		try {
@@ -285,9 +333,7 @@ public class TextBuddy {
 		}
 
 		if (isEmptyFile()) {
-			String fileName = outputFile.getName();
-			String message = String.format(MESSAGE_EMPTY_FILE, fileName);
-			messagePrinter(message);
+			printEmptyFileMessage();
 		}
 	}
 
@@ -330,6 +376,9 @@ public class TextBuddy {
 
 			case "exit":
 				return ACTION_TYPE.EXIT_PROGRAM;
+				
+			case "sort":
+				return ACTION_TYPE.SORT;
 
 			default:
 				return ACTION_TYPE.INVALID_COMMAND;
@@ -372,6 +421,13 @@ public class TextBuddy {
 		String message = String.format(MESSAGE_READY, fileName);
 		messagePrinter(message);
 	}
+	
+	private static void printEmptyFileMessage() {
+		String fileName = outputFile.getName();
+		String message = String.format(MESSAGE_EMPTY_FILE, fileName);
+		messagePrinter(message);
+	}
+
 
 	private static void messagePrinter(String message) {
 		System.out.println(message);
