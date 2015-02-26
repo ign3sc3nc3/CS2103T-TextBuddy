@@ -13,11 +13,12 @@
  *  2. delete <integer> : Will delete the nth line as specified by integer input in the file. 
  *  	Shows error if no integer is given. 
  *  3. sort : Will sort the file contents alphabetically. Shows error when file is empty.
- *  3. display : Prints out the content of the file.
- *  4. clear : Deletes all contents of the file.
- *  5. exit: Exits the program.
+ *	4. search <key> : Will display all lines in the file containing <key>
+ *  5. display : Prints out the content of the file.
+ *  6. clear : Deletes all contents of the file.
+ *  7. exit: Exits the program.
  *  
- *  Every add, delete and clear operation will save the file.
+ *  Every add, delete, sort, clear operation will save the file.
  *	Improper commands given will result in an error message.
  *	Deleting non-existent lines will result in an error message.
  */
@@ -35,9 +36,9 @@ public class TextBuddy {
 	private static final String MESSAGE_COMMAND_NOT_RECOGNISED = "Command is not recognised. Please try again.";
 	private static final String MESSAGE_LINE_NOT_FOUND = "Line %1$s cannot be found in %2$s.";
 	private static final String MESSAGE_CLEAR_FILE = "All content deleted from %1$s";
-	private static final String MESSAGE_DELETE_LINE = "Deleted from %1$s: \"%2$s\" ";
-	private static final String MESSAGE_ADD_LINE = "Added to %1$s: \"%2$s\" ";
-	private static final String MESSAGE_DISPLAY_LINE = "%1$s. %2$s";
+	private static final String MESSAGE_DELETE_LINE = "Deleted from %1$s: \"%2$s\"";
+	private static final String MESSAGE_ADD_LINE = "Added to %1$s: \"%2$s\"";
+	private static final String MESSAGE_DISPLAY_LINE = "%1$s. %2$s\n";
 	private static final String MESSAGE_EMPTY_FILE = "%1$s is empty.";
 	private static final String MESSAGE_WELCOME = "Welcome to Textbuddy.";
 	private static final String MESSAGE_READY = "%1$s is ready for use.";
@@ -50,6 +51,7 @@ public class TextBuddy {
 
 	private static final String MESSAGE_IO_ERROR = "Error reading or writing file.";
 	private static final String MESSAGE_CREATE_TEMP_FILE_ERROR = "Error in creating temporary file.";
+	private static final String MESSAGE_NAN_ERROR = "User input for delete function is not a number";
 
 	private static final String STRING_PREFIX = "temp";
 	private static final String STRING_POSTFIX = "txt";
@@ -67,7 +69,8 @@ public class TextBuddy {
 	public static void main(String[] args) {
 		String outputFileName = args[0];
 		Scanner commandLineInput = new Scanner(System.in);
-
+		String commandResult;
+		
 		printWelcomeMessage();
 
 		outputFileName = overwriteExistingFile(outputFileName, commandLineInput);
@@ -76,16 +79,16 @@ public class TextBuddy {
 		createFileIfDoesNotExist();
 
 		printReadyMessage();
-
-		commandExecuter(commandLineInput);
-
+		
+		while(true){
+			System.out.print(MESSAGE_COMMAND);
+			String inputString = commandLineInput.nextLine(); 
+			commandResult = commandExecuter(inputString);
+			messagePrinter(commandResult);
+		}
 	}
 
-	private static void commandExecuter(Scanner commandLineInput) {
-		while (true) {
-			System.out.print(MESSAGE_COMMAND);
-
-			String command = commandLineInput.nextLine();
+	public static String commandExecuter(String command) {
 			String actionString = getFirstWord(command);
 			String sentence = getTextLine(command);
 			ACTION_TYPE actionType = actionInterpreter(actionString);
@@ -93,50 +96,43 @@ public class TextBuddy {
 			switch (actionType) {
 				case ADD_LINE:
 					addLineToFile(sentence);
-					printAddMessage(sentence);
-					break;
+					return createAddMessage(sentence);
 
 				case DELETE_LINE:
 
 					if (isNumberString(sentence)) {
 						int lineToDelete = getLineToDelete(sentence);
-						deleteLineFromFile(lineToDelete);
+						return deleteLineFromFile(lineToDelete);
+					} else {
+						return MESSAGE_NAN_ERROR;
 					}
-					break;
 
 				case CLEAR_FILE:
 					clearFileData();
-					printClearMessage();
-					break;
-
+					return createClearMessage();
+				
 				case DISPLAY_FILE:
-					printFile();
-					break;
+					return createPrintFileString();
 					
 				case SORT:
-					sortFileContents();
-					break;
+					return sortFileContents();
 					
 				case SEARCH:
-					search(sentence);
-					break;
+					return search(sentence);
 
 				case EXIT_PROGRAM:
-					exitProgram();
-					break;
+					return exitProgram();
 
 				default:
-					messagePrinter(MESSAGE_COMMAND_NOT_RECOGNISED);
-					break;
+					return MESSAGE_COMMAND_NOT_RECOGNISED;
 			}
 
 		}
-	}
 	
-	public static void search(String key){
+	private static String search(String key){
 		printSearchMessage(key);
 		ArrayList<String> list = getListOfLinesContainingKey(key);
-		printList(list);
+		return createPrintListString(list);
 	}
 	
 	private static ArrayList<String> getListOfLinesContainingKey(String key){
@@ -167,14 +163,14 @@ public class TextBuddy {
 		return false;		
 	}
 	
-	private static void printList(ArrayList<String> list){
+	private static String createPrintListString(ArrayList<String> list){
 		StringBuilder builder = new StringBuilder();
 		int index = 1;
 		for(String line : list){
 			builder.append(index + ". " + line + "\n");
 			index++;
 		}
-		messagePrinter(builder.toString());
+		return builder.toString();
 	}
 	
 	private static void printSearchMessage(String key){
@@ -192,7 +188,6 @@ public class TextBuddy {
 			Integer.parseInt(sentence);
 			return true;
 		} catch (NumberFormatException e) {
-			messagePrinter(MESSAGE_COMMAND_NOT_RECOGNISED);
 			return false;
 		}
 
@@ -236,7 +231,7 @@ public class TextBuddy {
 		closeWriter();
 	}
 
-	private static void deleteLineFromFile(int lineToDelete) {
+	private static String deleteLineFromFile(int lineToDelete) {
 
 		createTemporaryFile();
 
@@ -266,9 +261,9 @@ public class TextBuddy {
 		rewriteActualFileWithTempFile();
 
 		if (sentenceIsFound) {
-			printDeleteMessage(sentenceDeleted);
+			return createDeleteMessage(sentenceDeleted);
 		} else {
-			printNotFoundMessage(lineToDelete);
+			return createNotFoundMessage(lineToDelete);
 		}
 
 	}
@@ -296,15 +291,14 @@ public class TextBuddy {
 		deleteTemporaryFile();
 	}
 	
-	private static void sortFileContents(){
+	private static String sortFileContents(){
 		if(isEmptyFile()){
-			printEmptyFileMessage();
-			return;
+			return createEmptyFileMessage();
 		}
 
 		ArrayList<String> list = generateSortedList();		
 		transferSortedListToFile(list);
-		printSortedMessage();
+		return createSortedMessage();
 	}
 
 	private static void transferSortedListToFile(ArrayList<String> list) {
@@ -374,20 +368,25 @@ public class TextBuddy {
 		return sentenceWithoutFirstWord;
 	}
 
-	private static void printFile() {
+	private static String createPrintFileString() {
+		
+		if (isEmptyFile()) {
+			return createEmptyFileMessage();
+		}
+		
 		int lineCount = 0;
+		StringBuilder builder = new StringBuilder();
 
 		setUpReader(outputFile);
 		
 		while (reader.hasNextLine()) {
 			lineCount++;
 			String message = String.format(MESSAGE_DISPLAY_LINE, lineCount, reader.nextLine());
-			messagePrinter(message);
+			builder.append(message);
 		}
-
-		if (isEmptyFile()) {
-			printEmptyFileMessage();
-		}
+		
+		return builder.toString();
+		
 	}
 
 	private static Boolean isEmptyFile() {
@@ -447,29 +446,25 @@ public class TextBuddy {
 		messagePrinter(MESSAGE_WELCOME);
 	}
 
-	private static void printAddMessage(String sentence) {
+	private static String createAddMessage(String sentence) {
 		String fileName = outputFile.getName();
 		String message = String.format(MESSAGE_ADD_LINE, fileName, sentence);
-		messagePrinter(message);
+		return message;
 	}
 
-	private static void printDeleteMessage(String sentence) {
+	private static String createDeleteMessage(String sentence) {
 		String fileName = outputFile.getName();
-		String message = String.format(MESSAGE_DELETE_LINE, fileName, sentence);
-		messagePrinter(message);
+		return String.format(MESSAGE_DELETE_LINE, fileName, sentence);
 	}
 
-	private static void printClearMessage() {
+	private static String createClearMessage() {
 		String fileName = outputFile.getName();
-		String message = String.format(MESSAGE_CLEAR_FILE, fileName);
-		messagePrinter(message);
-
+		return String.format(MESSAGE_CLEAR_FILE, fileName);
 	}
 
-	private static void printNotFoundMessage(int lineNumber) {
+	private static String createNotFoundMessage(int lineNumber) {
 		String fileName = outputFile.getName();
-		String message = String.format(MESSAGE_LINE_NOT_FOUND, lineNumber, fileName);
-		messagePrinter(message);
+		return String.format(MESSAGE_LINE_NOT_FOUND, lineNumber, fileName);
 	}
 
 	private static void printReadyMessage() {
@@ -478,23 +473,26 @@ public class TextBuddy {
 		messagePrinter(message);
 	}
 	
-	private static void printEmptyFileMessage() {
+	private static String createEmptyFileMessage() {
 		String fileName = outputFile.getName();
-		String message = String.format(MESSAGE_EMPTY_FILE, fileName);
-		messagePrinter(message);
+		return String.format(MESSAGE_EMPTY_FILE, fileName);
 	}
 	
-	private static void printSortedMessage(){
+	private static String createSortedMessage(){
 		String fileName = outputFile.getName();
-		String message = String.format(MESSAGE_SORTED_MESSAGE, fileName);
-		messagePrinter(message);
+		return String.format(MESSAGE_SORTED_MESSAGE, fileName);
+
 	}
 
 	private static void messagePrinter(String message) {
 		System.out.println(message);
 	}
-
-	private static void exitProgram() {
+	
+	public static void deleteFile() {
+        outputFile.delete();
+    }
+	private static String exitProgram() {
 		System.exit(0);
+		return null;
 	}
 }
