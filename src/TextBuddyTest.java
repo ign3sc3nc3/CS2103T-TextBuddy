@@ -40,13 +40,17 @@ public class TextBuddyTest {
 	
 	@Test
 	public void testDeleteFirstWord(){
-		assertEquals("hello how are you?", TextBuddy.getLineToAddOrDelete(s1));
-		assertEquals("30", TextBuddy.getLineToAddOrDelete(s2));
-		assertEquals("skills", TextBuddy.getLineToAddOrDelete(s3));
-		assertEquals("even worse typing skills", TextBuddy.getLineToAddOrDelete(s4));
-		assertEquals("love makes the world go round", TextBuddy.getLineToAddOrDelete(s5));
+		assertEquals("hello how are you?", TextBuddy.getTextLine(s1));
+		assertEquals("30", TextBuddy.getTextLine(s2));
+		assertEquals("skills", TextBuddy.getTextLine(s3));
+		assertEquals("even worse typing skills", TextBuddy.getTextLine(s4));
+		assertEquals("love makes the world go round", TextBuddy.getTextLine(s5));
 		
 	}
 	
+	@Test
+	public void testSearch(){
+		
+	}
 	
 }

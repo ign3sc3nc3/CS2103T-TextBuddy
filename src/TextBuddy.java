@@ -11,7 +11,8 @@
  * Functions of TextBuddy are as follows: 
  *  1. add <string> : Will add string input into file.
  *  2. delete <integer> : Will delete the nth line as specified by integer input in the file. 
- *  	Throws error if no integer is given. 
+ *  	Shows error if no integer is given. 
+ *  3. sort : Will sort the file contents alphabetically. Shows error when file is empty.
  *  3. display : Prints out the content of the file.
  *  4. clear : Deletes all contents of the file.
  *  5. exit: Exits the program.
@@ -25,13 +26,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.FileWriter;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
 import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 
 public class TextBuddy {
 
@@ -48,6 +45,8 @@ public class TextBuddy {
 	private static final String MESSAGE_FILE_ALREADY_EXISTS = "%1$s already exists. Overwrite existing file? (Y/N) ";
 	private static final String MESSAGE_ENTER_NEW_FILE = "Enter new file name: ";
 	private static final String MESSAGE_OVERWRITE_FILE = "%1$s will be overwritten.";
+	private static final String MESSAGE_SORTED_MESSAGE = "%1$s has been sorted.";
+	private static final String MESSAGE_SEARCH = "The word \"%1$s\" is found in: ";
 
 	private static final String MESSAGE_IO_ERROR = "Error reading or writing file.";
 	private static final String MESSAGE_CREATE_TEMP_FILE_ERROR = "Error in creating temporary file.";
@@ -61,7 +60,7 @@ public class TextBuddy {
 	private static Scanner reader;
 
 	enum ACTION_TYPE {
-		ADD_LINE, DELETE_LINE, CLEAR_FILE, DISPLAY_FILE, INVALID_COMMAND, EXIT_PROGRAM, SORT;
+		ADD_LINE, DELETE_LINE, CLEAR_FILE, DISPLAY_FILE, INVALID_COMMAND, EXIT_PROGRAM, SORT, SEARCH;
 
 	}
 
@@ -88,7 +87,7 @@ public class TextBuddy {
 
 			String command = commandLineInput.nextLine();
 			String actionString = getFirstWord(command);
-			String sentence = getLineToAddOrDelete(command);
+			String sentence = getTextLine(command);
 			ACTION_TYPE actionType = actionInterpreter(actionString);
 
 			switch (actionType) {
@@ -117,6 +116,10 @@ public class TextBuddy {
 				case SORT:
 					sortFileContents();
 					break;
+					
+				case SEARCH:
+					search(sentence);
+					break;
 
 				case EXIT_PROGRAM:
 					exitProgram();
@@ -129,6 +132,56 @@ public class TextBuddy {
 
 		}
 	}
+	
+	public static void search(String key){
+		printSearchMessage(key);
+		ArrayList<String> list = getListOfLinesContainingKey(key);
+		printList(list);
+	}
+	
+	private static ArrayList<String> getListOfLinesContainingKey(String key){
+		setUpReader(outputFile);
+		ArrayList<String> list = new ArrayList<String>();
+		
+		while(reader.hasNextLine()){
+			String line = reader.nextLine();
+			if(hasKey(key, line)){
+				list.add(line);
+			}
+		}
+		closeReader();
+		
+		return list;
+		
+	}
+	
+	//hasKey is case sensitive, ie. Will return false when key is "how" and line
+	//is "How are you?"
+	private static Boolean hasKey(String key, String line){
+		String[] splitString = line.split("\\s");
+		for(String word : splitString){
+			if(word.equals(key)){
+				return true;
+			}
+		}
+		return false;		
+	}
+	
+	private static void printList(ArrayList<String> list){
+		StringBuilder builder = new StringBuilder();
+		int index = 1;
+		for(String line : list){
+			builder.append(index + ". " + line + "\n");
+			index++;
+		}
+		messagePrinter(builder.toString());
+	}
+	
+	private static void printSearchMessage(String key){
+		String message = String.format(MESSAGE_SEARCH, key);
+		messagePrinter(message);
+	}
+	
 	
 	private static int getLineToDelete(String sentence){
 		return Integer.parseInt(sentence);
@@ -163,16 +216,17 @@ public class TextBuddy {
 			System.out.print(message);
 
 			chooseToOverwrite = commandLineInput.nextLine().toLowerCase().trim();
-
-			if (chooseToOverwrite.equals("n")) {
-				System.out.print(MESSAGE_ENTER_NEW_FILE);
-				outputFileName = commandLineInput.nextLine();
-			} else {
-				message = String.format(MESSAGE_OVERWRITE_FILE, outputFileName);
-				messagePrinter(message);
-				break;
+			
+				if (chooseToOverwrite.equals("n")) {
+					System.out.print(MESSAGE_ENTER_NEW_FILE);
+					outputFileName = commandLineInput.nextLine();
+					break;
+				} else if(chooseToOverwrite.equals("y")){
+					message = String.format(MESSAGE_OVERWRITE_FILE, outputFileName);
+					messagePrinter(message);
+					break;
+				}
 			}
-		}
 		return outputFileName;
 	}
 
@@ -250,16 +304,15 @@ public class TextBuddy {
 
 		ArrayList<String> list = generateSortedList();		
 		transferSortedListToFile(list);
+		printSortedMessage();
 	}
 
 	private static void transferSortedListToFile(ArrayList<String> list) {
-		Iterator<String> iterator = list.iterator();
-		
 		//false: clears output file of all contents
 		setUpWriter(outputFile, false);
 		
-		while(iterator.hasNext()){
-			writer.println(iterator.next());
+		for(String line : list){
+			writer.println(line);
 		}
 		
 		closeWriter();
@@ -315,7 +368,7 @@ public class TextBuddy {
 		return firstWord;
 	}
 
-	public static String getLineToAddOrDelete(String sentence) {
+	public static String getTextLine(String sentence) {
 		String sentenceWithoutFirstWord = sentence.replace(getFirstWord(sentence), "").trim();
 
 		return sentenceWithoutFirstWord;
@@ -379,6 +432,9 @@ public class TextBuddy {
 				
 			case "sort":
 				return ACTION_TYPE.SORT;
+			
+			case "search":
+				return ACTION_TYPE.SEARCH;
 
 			default:
 				return ACTION_TYPE.INVALID_COMMAND;
@@ -427,7 +483,12 @@ public class TextBuddy {
 		String message = String.format(MESSAGE_EMPTY_FILE, fileName);
 		messagePrinter(message);
 	}
-
+	
+	private static void printSortedMessage(){
+		String fileName = outputFile.getName();
+		String message = String.format(MESSAGE_SORTED_MESSAGE, fileName);
+		messagePrinter(message);
+	}
 
 	private static void messagePrinter(String message) {
 		System.out.println(message);
