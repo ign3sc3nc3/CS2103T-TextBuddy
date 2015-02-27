@@ -3,6 +3,9 @@
  * Author: Jonathan Lim Siu Chi
  * Matric Number: A0110839H
  * Group: W15-3J
+ * 
+ * This test driver provides unit testing primarily for the search and sort functions. Basic functions such as getFirstWord 
+ * and deleteFirstWord are also tested.
  */
 
 import static org.junit.Assert.*;
